@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>张老师 / Ms. Zhang — 2026 Kindergarten Class</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Nunito', sans-serif;
+      background: #f0f0e8;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 1rem;
+    }
+
+    h1 {
+      font-size: clamp(1.1rem, 2.5vw, 1.6rem);
+      font-weight: 800;
+      color: #3B1E8E;
+      text-align: center;
+      margin-bottom: 0.75rem;
+    }
+
+    /* ── POSTER WRAPPER ── */
+    .poster-wrap {
+      position: relative;
+      width: 100%;
+      max-width: 1200px;
+      aspect-ratio: 3 / 2;
+    }
+
+    .poster-wrap img.poster {
+      width: 100%;
+      height: 100%;
+      display: block;
+      border-radius: 12px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+    }
+
+    /* ── BALLOON CLICK ZONES ── */
+    /* Each .balloon is absolutely positioned using % coords.
+       cx/cy = center of the balloon face as % of poster width/height
+       size = diameter as % of poster width                          */
+    .balloon {
+      position: absolute;
+      border-radius: 50%;
+      cursor: pointer;
+      /* transparent by default; shows ring on hover */
+      background: transparent;
+      border: 3px solid transparent;
+      transform: translate(-50%, -50%);
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .balloon:hover {
+      border-color: rgba(255,255,255,0.85);
+      background: rgba(255,255,255,0.18);
+    }
+    .balloon:focus-visible {
+      outline: 3px solid #7C3AED;
+      outline-offset: 3px;
+    }
+
+    /* tooltip on hover */
+    .balloon::after {
+      content: attr(data-name);
+      position: absolute;
+      bottom: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(30,20,60,0.88);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+      padding: 4px 10px;
+      border-radius: 999px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .balloon:hover::after,
+    .balloon:focus-visible::after { opacity: 1; }
+
+    /* ── MODAL ── */
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.65);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .overlay.active { display: flex; }
+
+    .modal {
+      background: #fff;
+      border-radius: 20px;
+      width: 100%;
+      max-width: 560px;
+      overflow: hidden;
+      animation: popIn 0.18s ease;
+    }
+    @keyframes popIn {
+      from { transform: scale(0.9); opacity: 0; }
+      to   { transform: scale(1);   opacity: 1; }
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.9rem 1.25rem;
+      background: linear-gradient(135deg, #EDE9FE, #CCFBF1);
+    }
+    .modal-name {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: #3B1E8E;
+    }
+    .modal-close {
+      background: rgba(255,255,255,0.7);
+      border: none;
+      border-radius: 50%;
+      width: 32px; height: 32px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: #5B21B6;
+      font-family: inherit;
+      font-weight: 700;
+    }
+    .modal-close:hover { background: rgba(255,255,255,0.95); }
+
+    .modal-video-wrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: #111;
+    }
+    .modal-video-wrap iframe,
+    .modal-video-wrap video {
+      width: 100%; height: 100%;
+      display: block;
+      border: none;
+    }
+
+    .modal-footer {
+      padding: 0.8rem 1.25rem;
+      display: flex;
+      justify-content: flex-end;
+    }
+    .btn-close {
+      background: #EDE9FE;
+      color: #5B21B6;
+      border: none;
+      border-radius: 999px;
+      padding: 7px 20px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .btn-close:hover { background: #DDD6FE; }
+
+    .hint {
+      font-size: 0.8rem;
+      color: #888;
+      text-align: center;
+      margin-top: 0.6rem;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🎈 张老师 / Ms. Zhang's 2026 Kindergarten Class 🎈</h1>
+  <p class="hint">Click on any balloon to watch their video message!</p>
+
+  <div class="poster-wrap" id="posterWrap">
+    <img class="poster"
+         src="poster.jpg"
+         alt="Ms. Zhang's 2026 Kindergarten Class poster with hot air balloons" />
+
+    <!--
+      BALLOON CLICK ZONES
+      style="left: X%; top: Y%; width: W%; height: W%;"
+        X = center of balloon face as % of poster width
+        Y = center of balloon face as % of poster height
+        W = diameter of balloon face as % of poster width
+      Adjust X/Y/W values if they need fine-tuning after you view it in-browser.
+    -->
+
+    <!-- Row 1 (top) -->
+    <div class="balloon" tabindex="0" data-name="Escher Appenzeller"
+         style="left:49.5%; top:14%; width:9%; height:0; padding-bottom:9%"
+         data-video="YOUR_BOX_EMBED_URL"></div>
+
+    <div class="balloon" tabindex="0" data-name="Adelaide Campbell"
+         style="left:68%; top:18%; width:8.5%; height:0; padding-bottom:8.5%"
+         data-video="YOUR_BOX_EMBED_URL"></div>
+
+    <div class="balloon" tabindex="0" data-name="Kenneth Chen"
+         style="left:82.5%; top:15%; width:8%; height:0; padding-bottom:8%"
+         data-video="YOUR_BOX_EMBED_URL"></div>
+
+    <div class="balloon" tabindex="0" data-name="Camilla Cheng"
+         style="left:95%; top:18%; width:7.5%; height:0; padding-bottom:7.5%"
+         data-video="YOUR_BOX_EMBED_URL"></div>
+
+    <!-- Row 2 -->
+    <div class="balloon" tabindex="0" data-name="Hailey Huang"
+         style="left:20%; top:25%; width:9%; height:0; padding-bottom:9%"
+         data-video="YOUR_BOX_EMBED_URL"></div>
+
+    <div class="balloon" tabindex="0" data-name="Alana Jiang"
+         style="left:33%; top:22%; width:9%; height:0; padding-bottom:9%"
+         data-video="YOUR_BOX_EMBED_URL"></div>
+
+    <div class="balloon" tabindex="0" data-name="Trevor Lee"
+         style="left:49%; top:30%; width:9%; height:0; padding-bottom:9%"
+         data-video="YOUR_BOX_EMBED_URL"></div>
+
+    <div class="balloon" tabindex="0" data-name="Audrey Lin"
+         style="left:62.5%; top:33%; width:9%; height:0; padding-bottom:9%"
+         data-video="YOUR_BOX_EMBED_URL"></div>
+
+    <div class="balloon" tabindex="0" data-name="Yixuan Liu"
+         style="left:75%; top:28%; width:8.5%; height:0; padding-bottom:8.5%"
+         data-video="YOUR_BOX_EMBED_URL"></div>
+
+    <div class="balloon" tabindex="0" data-name="Arthur McKenzie"
+         style="left:87.5%; top:30%; width:8.5%; height:0; padding-bottom:8.5%"
+         data-video="YOUR_BOX_EMBED_URL"></div>
+
+    <!-- Row 3 (middle) -->
+    <div class="balloon" tabindex="0" data-name="Grace Ho"
+         style="left:8%; top:38%; width:9%; height:0; padding-bottom:9%"
+         data-video="YOUR_BOX_EMBED_URL"></div>
+
+    <div class="balloon" tabindex="0" data-name="Joie Tam"
+         style="left:22%; top:42%; width:9%; height:0; padding-bottom:9%"
+         data-video="YOUR_BOX_EMBED_URL"></div>
+
+    <div class="balloon" tabindex="0" data-name="Chloe Wang"
+         style="left:35%; top:45%; width:9%; height:0; padding-bottom:9%"
+         data-video="YOUR_BOX_EMBED_URL"></div>
+
+    <div class="balloon" tabindex="0" data-name="Jasper Wang"
+         style="left:50%; top:48%; width:9%; height:0; padding-bottom:9%"
+         data-video="YOUR_BOX_EMBED_URL"></div>
+
+    <div class="balloon" tabindex="0" data-name="Effie Yan"
+         style="left:68.5%; top:52%; width:8.5%; height:0; padding-bottom:8.5%"
+         data-video="YOUR_BOX_EMBED_URL"></div>
+
+    <div class="balloon" tabindex="0" data-name="Liam Yee"
+         style="left:80.5%; top:47%; width:8.5%; height:0; padding-bottom:8.5%"
+         data-video="YOUR_BOX_EMBED_URL"></div>
+
+    <!-- Row 4 (lower) -->
+    <div class="balloon" tabindex="0" data-name="Juniper Sturges"
+         style="left:10%; top:57%; width:9%; height:0; padding-bottom:9%"
+         data-video="YOUR_BOX_EMBED_URL"></div>
+
+    <div class="balloon" tabindex="0" data-name="Yiyi Wang"
+         style="left:30%; top:60%; width:9%; height:0; padding-bottom:9%"
+         data-video="YOUR_BOX_EMBED_URL"></div>
+
+    <div class="balloon" tabindex="0" data-name="Ellie Woo"
+         style="left:48.5%; top:62%; width:9%; height:0; padding-bottom:9%"
+         data-video="YOUR_BOX_EMBED_URL"></div>
+
+    <div class="balloon" tabindex="0" data-name="Queensby Xuan"
+         style="left:57%; top:74%; width:9%; height:0; padding-bottom:9%"
+         data-video="YOUR_BOX_EMBED_URL"></div>
+
+    <!-- Bottom row -->
+    <div class="balloon" tabindex="0" data-name="Jiaheng Yu"
+         style="left:30%; top:78%; width:9%; height:0; padding-bottom:9%"
+         data-video="YOUR_BOX_EMBED_URL"></div>
+
+    <div class="balloon" tabindex="0" data-name="Theodore Yu"
+         style="left:46.5%; top:84%; width:9%; height:0; padding-bottom:9%"
+         data-video="YOUR_BOX_EMBED_URL"></div>
+
+  </div>
+
+  <p class="hint" style="margin-top:0.5rem">🎒 Your 2026 Kindergarten Class · 张老师 / Ms. Zhang</p>
+
+  <!-- Modal -->
+  <div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-labelledby="modalNameEl">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-name" id="modalNameEl"></div>
+        <button class="modal-close" onclick="closeModal()" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-video-wrap" id="modalVideoWrap"></div>
+      <div class="modal-footer">
+        <button class="btn-close" onclick="closeModal()">Close ✕</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Wire up all balloon click zones
+    document.querySelectorAll('.balloon').forEach(el => {
+      el.addEventListener('click', () => openModal(el.dataset.name, el.dataset.video));
+      el.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') openModal(el.dataset.name, el.dataset.video);
+      });
+    });
+
+    function openModal(name, videoUrl) {
+      document.getElementById('modalNameEl').textContent = '🎬 ' + name;
+      const wrap = document.getElementById('modalVideoWrap');
+      if (videoUrl && videoUrl !== 'YOUR_BOX_EMBED_URL') {
+        wrap.innerHTML = `<iframe src="${videoUrl}" allowfullscreen allow="autoplay"></iframe>`;
+      } else {
+        wrap.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#aaa;font-size:0.9rem;padding:1rem;text-align:center;">
+          Add this student's Box embed URL to the data-video attribute on their balloon div.
+        </div>`;
+      }
+      document.getElementById('overlay').classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+      document.getElementById('overlay').classList.remove('active');
+      document.getElementById('modalVideoWrap').innerHTML = '';
+      document.body.style.overflow = '';
+    }
+
+    document.getElementById('overlay').addEventListener('click', function(e) {
+      if (e.target === this) closeModal();
+    });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+  </script>
+</body>
+</html>
